@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { Form, Button, Alert } from 'react-bootstrap';
-
-import { createUser } from '../utils/API';
+// import { createUser } from '../utils/API';
 import Auth from '../utils/auth';
 import type { User } from '../models/User';
-
+import { useMutation } from '@apollo/client';
+import { ADD_USER } from '../utils/mutations';
 // biome-ignore lint/correctness/noEmptyPattern: <explanation>
 const SignupForm = ({}: { handleModalClose: () => void }) => {
   // set initial form state
@@ -14,36 +14,33 @@ const SignupForm = ({}: { handleModalClose: () => void }) => {
   const [validated] = useState(false);
   // set state for alert
   const [showAlert, setShowAlert] = useState(false);
-
+  const [createUser] = useMutation(ADD_USER);
   const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setUserFormData({ ...userFormData, [name]: value });
   };
-
   const handleFormSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
     // check if form has everything (as per react-bootstrap docs)
     const form = event.currentTarget;
     if (form.checkValidity() === false) {
       event.preventDefault();
       event.stopPropagation();
     }
-
     try {
-      const response = await createUser(userFormData);
-
-      if (!response.ok) {
+      const { data } = await createUser({
+        variables: {...userFormData}
+      });
+      console.log(data);
+      if (!data) {
         throw new Error('something went wrong!');
       }
-
-      const { token } = await response.json();
+      const { token } = data.addUser;
       Auth.login(token);
     } catch (err) {
       console.error(err);
       setShowAlert(true);
     }
-
     setUserFormData({
       username: '',
       email: '',
@@ -51,7 +48,6 @@ const SignupForm = ({}: { handleModalClose: () => void }) => {
       savedBooks: [],
     });
   };
-
   return (
     <>
       {/* This is needed for the validation functionality above */}
@@ -60,7 +56,6 @@ const SignupForm = ({}: { handleModalClose: () => void }) => {
         <Alert dismissible onClose={() => setShowAlert(false)} show={showAlert} variant='danger'>
           Something went wrong with your signup!
         </Alert>
-
         <Form.Group className='mb-3'>
           <Form.Label htmlFor='username'>Username</Form.Label>
           <Form.Control
@@ -73,7 +68,6 @@ const SignupForm = ({}: { handleModalClose: () => void }) => {
           />
           <Form.Control.Feedback type='invalid'>Username is required!</Form.Control.Feedback>
         </Form.Group>
-
         <Form.Group className='mb-3'>
           <Form.Label htmlFor='email'>Email</Form.Label>
           <Form.Control
@@ -86,7 +80,6 @@ const SignupForm = ({}: { handleModalClose: () => void }) => {
           />
           <Form.Control.Feedback type='invalid'>Email is required!</Form.Control.Feedback>
         </Form.Group>
-
         <Form.Group className='mb-3'>
           <Form.Label htmlFor='password'>Password</Form.Label>
           <Form.Control
@@ -109,5 +102,4 @@ const SignupForm = ({}: { handleModalClose: () => void }) => {
     </>
   );
 };
-
 export default SignupForm;
